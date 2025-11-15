@@ -1,0 +1,25 @@
+# --- Rust build files ---
+/target/
+
+# --- SQLx compile-time cache (safe to ignore) ---
+.sqlx/
+
+# --- Environment variables ---
+.env
+.env.local
+.env.development
+.env.production
+
+# --- Backup / temp files ---
+*.log
+*.tmp
+*.bak
+
+# --- Editor files ---
+.idea/
+.vscode/
+*.swp
+
+# --- OS generated files ---
+.DS_Store
+Thumbs.db
