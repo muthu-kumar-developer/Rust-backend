@@ -1,4 +1,3 @@
-use axum::Router;
 use dotenvy::dotenv;
 use tokio::net::TcpListener;
 

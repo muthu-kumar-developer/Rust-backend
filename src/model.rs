@@ -15,3 +15,10 @@ pub struct CreateUser {
     pub email: Option<String>,
     pub phone_number: Option<i64>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUser{
+    pub user_name:Option<String>,
+    pub email:Option<String>,
+    pub phone_number:Option<i64>
+}
