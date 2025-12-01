@@ -3,10 +3,10 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use sqlx::{PgPool, pool};
+use sqlx::PgPool;
 
-use crate::model::{CreateUser, User};
-use crate::{error::AppError, model::UpdateUser};
+use crate::model::{CreateUser, UpdateUser, UpdateUsers, User};
+use crate::{error::AppError, model::GetUsers};
 
 pub async fn create_handler(State(pool): State<PgPool>) -> Result<Json<Vec<User>>, AppError> {
     let users = sqlx::query_as::<_, User>("SELECT * FROM users")
@@ -52,35 +52,34 @@ pub async fn update_handler_user(
     Path(id): Path<i32>,
     Json(payload): Json<UpdateUser>,
 ) -> Result<Json<User>, AppError> {
-
-    // 1️⃣ Fetch existing user first
+    // 1️⃣ Fetch existing user (only required fields)
     let existing = sqlx::query_as::<_, User>(
-        r#"SELECT id, user_name, email, phone_number, created_at, updated_at
-           FROM users WHERE id = $1"#
+        r#"SELECT id, user_name, email, phone_number
+           FROM users WHERE id = $1"#,
     )
     .bind(id)
     .fetch_optional(&pool)
     .await?;
 
-    // 404 if user not found
     let existing = existing.ok_or(AppError::NotFound("User not found".into()))?;
 
-    // 2️⃣ Merge existing data with new payload
-    let updated_user_name = payload.user_name.unwrap_or(existing.user_name);
-    let updated_email = payload.email.unwrap_or(existing.email);
-    let updated_phone = payload.phone_number.unwrap_or(existing.phone_number);
+    // 2️⃣ Merge values safely
+    let updated_user_name = payload.user_name.or(existing.user_name);
+    let updated_email = payload.email.or(existing.email);
+    let updated_phone = payload.phone_number.or(existing.phone_number);
 
-    // 3️⃣ Update database
-    let updated = sqlx::query_as::<_, User>(r#"
+    // 3️⃣ Update user (only return User fields)
+    let updated = sqlx::query_as::<_, User>(
+        r#"
         UPDATE users
         SET 
             user_name = $1,
             email = $2,
-            phone_number = $3,
-            updated_at = NOW()
+            phone_number = $3
         WHERE id = $4
-        RETURNING id, user_name, email, phone_number, created_at, updated_at
-    "#)
+        RETURNING id, user_name, email, phone_number
+    "#,
+    )
     .bind(updated_user_name)
     .bind(updated_email)
     .bind(updated_phone)
@@ -90,3 +89,34 @@ pub async fn update_handler_user(
 
     Ok(Json(updated))
 }
+
+pub async fn get_users(State(pool): State<PgPool>) -> Result<Json<Vec<GetUsers>>, AppError> {
+    let users = sqlx::query_as::<_, GetUsers>("SELECT * FROM public.usertables")
+        .fetch_all(&pool)
+        .await?;
+    Ok(Json(users))
+}
+
+pub async fn update_user(
+    State(pool): State<PgPool>,
+    Path(id): Path<i32>,
+    Json(payload): Json<UpdateUsers>,
+) -> Result<Json<GetUsers>, AppError> {
+
+    let updated_user = sqlx::query_as::<_, GetUsers>(
+        r#"
+        UPDATE usertables 
+        SET name = $1, age = $2
+        WHERE id = $3
+        RETURNING *
+        "#
+    )
+    .bind(payload.name)  // $1
+    .bind(payload.age)   // $2
+    .bind(id)            // $3
+    .fetch_one(&pool)
+    .await?;
+
+    Ok(Json(updated_user))
+}
+

@@ -19,4 +19,3 @@ pub async fn main() {
         .await
         .expect("server is crashing")
 }
-

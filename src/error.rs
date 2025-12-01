@@ -3,14 +3,14 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use axum::Json;
+use serde_json::json;
 use sqlx::Error as SqlxErr;
 
 #[derive(Debug)]
 pub enum AppError {
-    SqlxError(SqlxErr),
-    NotFound(String),
     BadRequest(String),
+    NotFound(String),
+    SqlxError(SqlxErr),
 }
 
 impl From<SqlxErr> for AppError {
